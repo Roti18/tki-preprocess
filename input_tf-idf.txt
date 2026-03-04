@@ -1,6 +1,0 @@
-Q  = Tingkat Kurikulum 2013
-D1 = Distribusi buku kurikulum 2013 lambat timbul kisruh
-D2 = Menteri pendidikan pandang buruk tingkat didik Indonesia lihat kualitas guru rendah
-D3 = Sekolah guna kurikulum 2013 dalam belajar guru belajar komputer
-D4 = Tahun 2013 heboh kasus rampok Madura oleh siswa SMA
-D5 = Tingkat kurikulum 2013 beda dengan tahun sebelum terap cara belajar siswa aktif

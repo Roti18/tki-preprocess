@@ -62,11 +62,14 @@ N = len(doc_labels)   # jumlah dokumen (tanpa Query)
 #    tokenisasi + hapus stopword + stemming)
 # ─────────────────────────────────────────────
 def preprocess(text):
-    # Input sudah disederhanakan manual -- cukup lowercase + tokenisasi
-    # Tidak perlu stopword removal atau stemming agar hasil sesuai referensi
+    # Tahap 1: lowercase + hapus tanda baca
     text = text.lower()
-    text = re.sub(r'[^a-z0-9\s]', ' ', text)   # hilangkan tanda baca, simpan angka
-    tokens = [t for t in text.split() if len(t) >= 1]
+    text = re.sub(r'[^a-z0-9\s]', ' ', text)
+    tokens = text.split()
+    # Tahap 2: hapus stopword
+    tokens = [t for t in tokens if t not in stopwords]
+    # Tahap 3: stemming
+    tokens = [stemmer.stem(t) for t in tokens]
     return tokens
 
 # Token setelah preprocessing per label
