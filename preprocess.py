@@ -55,9 +55,27 @@ all_tokens_raw = [t for t in all_tokens_raw if len(t) > 1]
 # 5b. Hitung frekuensi kata MENTAH (sebelum preprocessing)
 raw_freq = Counter(all_tokens_raw)
 
-# 5c. Bangun tabel preprocessing per kata unik
+# 5c. Helper: deteksi imbuhan yang dihapus
+def get_affix_label(word, stem):
+    """Kembalikan label imbuhan yg dilepas, misal '(-kan)', '(me-)', '(me-, -kan)'."""
+    if stem == word:
+        return ''
+    idx = word.find(stem)
+    if idx >= 0:
+        prefix = word[:idx]          # imbuhan depan
+        suffix = word[idx+len(stem):]  # imbuhan belakang
+        parts = []
+        if prefix:
+            parts.append(f'{prefix}-')
+        if suffix:
+            parts.append(f'-{suffix}')
+        if parts:
+            return 'Stemming (' + ', '.join(parts) + ')'
+    # Fallback: stem tidak tampil literal (perubahan nasal, dll)
+    return f'Stemming ({word}\u2192{stem})'
+
+# 5d. Bangun tabel preprocessing per kata unik
 rows = []
-seen_stems = {}   # stem → original word pertama kali ditemukan
 
 for word, freq in sorted(raw_freq.items(), key=lambda x: -x[1]):
     is_stopword = word in stopwords
@@ -66,8 +84,7 @@ for word, freq in sorted(raw_freq.items(), key=lambda x: -x[1]):
     if is_stopword:
         keterangan = 'Stopword'
     elif stem != word:
-        # Kata mengalami stemming → catat bentuk asli → hasil
-        keterangan = f'Stemming ({word}→{stem})'
+        keterangan = get_affix_label(word, stem)
     else:
         keterangan = ''   # kata biasa, tidak berubah
 
@@ -198,7 +215,8 @@ with pd.ExcelWriter(OUTPUT_FILE, engine='openpyxl') as writer:
     # Data tabel
     for r_data in rows_sorted:
         no_val = order_map.get(r_data['word_raw'], '')
-        kata   = r_data['word_raw']
+        # Tampilkan kata DASAR (stem) di kolom Kata
+        kata   = r_data['stem']
         freq_v = r_data['freq']
         ket    = r_data['keterangan']
 
