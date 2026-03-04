@@ -267,8 +267,10 @@ for term in all_terms:
     # IDF: df
     dcell(ws, row, COL_DF,   df[term])
     # IDF: log(D/df)
-    dcell(ws, row, COL_LOGD, idf[term],
-          fill=GREEN if idf[term] > 0 else WHITE)
+    cell_idf = dcell(ws, row, COL_LOGD, idf[term],
+                     fill=GREEN if idf[term] > 0 else WHITE)
+    if idf[term] != 0:
+        cell_idf.number_format = '0.000000'
 
     # Wdt = TF x IDF
     for i, label in enumerate(all_labels):
@@ -331,7 +333,7 @@ ws2.cell(row=row2, column=4, value=docs_raw.get('Q', '')).font = F_NORM
 row2 += 2
 
 ws2.cell(row=row2, column=1,
-         value='Lakukan preprosesing terhadap semua dokumen dengan tokenisasi, stemming dan penghapusan stopword'
+         value='Lakukan preprosesing terhadap semua dokumen dengan tokenisasi'
          ).font = Font(bold=True, name='Calibri', size=11)
 ws2.merge_cells(start_row=row2, start_column=1, end_row=row2, end_column=10)
 row2 += 2
