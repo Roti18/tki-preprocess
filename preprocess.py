@@ -5,9 +5,9 @@ from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from collections import Counter
 
 # ─────────────────────────────────────────────
-# 1. KONFIGURASI PATH
+# 1. KONFIGURASI PATH (relatif ke lokasi script)
 # ─────────────────────────────────────────────
-BASE_DIR     = r'd:\project\sorting'
+BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILE   = os.path.join(BASE_DIR, 'input.txt')
 STOPWORD_FILE= os.path.join(BASE_DIR, 'stopword.txt')
 OUTPUT_DIR   = os.path.join(BASE_DIR, 'outputs')
