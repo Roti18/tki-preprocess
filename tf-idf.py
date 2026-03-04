@@ -103,7 +103,7 @@ for label in all_labels:
     for t in tokens:
         freq[t] = freq.get(t, 0) + 1
     tf[label] = {
-        term: round(freq.get(term, 0) / total, 6) if total > 0 else 0.0
+        term: (freq.get(term, 0) / total) if total > 0 else 0.0
         for term in all_terms
     }
 
@@ -117,14 +117,14 @@ idf = {}
 for term in all_terms:
     # df mencakup Q dan D1-Dn sesuai referensi
     df[term]  = sum(1 for label in all_labels if tf[label][term] > 0)
-    idf[term] = round(math.log10(N / df[term]), 6) if df[term] > 0 else 0.0
+    idf[term] = math.log10(N / df[term]) if df[term] > 0 else 0.0
 
 # ─────────────────────────────────────────────
 # 9. Wdt = TF × IDF
 # ─────────────────────────────────────────────
 wdt = {}
 for label in all_labels:
-    wdt[label] = {term: round(tf[label][term] * idf[term], 4)
+    wdt[label] = {term: tf[label][term] * idf[term]
                   for term in all_terms}
 
 # ─────────────────────────────────────────────
@@ -256,7 +256,7 @@ for term in all_terms:
     # TF (normalisasi)
     for i, label in enumerate(all_labels):
         val  = tf[label][term]
-        cell = ws.cell(row=row, column=COL_TF_START + i, value=val if val != 0 else '')
+        cell = ws.cell(row=row, column=COL_TF_START + i, value=val)
         cell.font      = F_NORM
         cell.fill      = YELLOW if val > 0 else WHITE
         cell.alignment = Alignment(horizontal='center', vertical='center')
@@ -274,7 +274,7 @@ for term in all_terms:
     for i, label in enumerate(all_labels):
         val  = wdt[label][term]
         fill = YELLOW if val > 0 else WHITE
-        cell = ws.cell(row=row, column=COL_WDT_START + i, value=val if val != 0 else '')
+        cell = ws.cell(row=row, column=COL_WDT_START + i, value=val)
         cell.font      = F_NORM
         cell.fill      = fill
         cell.alignment = Alignment(horizontal='center', vertical='center')
@@ -357,7 +357,7 @@ ws2.column_dimensions['B'].width = 80
 # ─────────────────────────────────────────────
 # SHEET 3: COSINE SIMILARITY
 # ─────────────────────────────────────────────
-ws3 = wb.create_sheet(title='Cosine Similarity')
+ws3 = wb.create_sheet(title='COSSIM')
 
 TEAL      = PatternFill('solid', fgColor='4F6228')   # header gelap
 TEAL_SUB  = PatternFill('solid', fgColor='C4D79B')   # sub-header
@@ -394,24 +394,24 @@ wd_product = {}  # wd_product[label][term]
 for label in all_labels:
     wd_product[label] = {}
     for term in all_terms:
-        wd_product[label][term] = round(wdt['Q'][term] * wdt[label][term], 4)
+        wd_product[label][term] = wdt['Q'][term] * wdt[label][term]
 
-WD_sum = {label: round(sum(wd_product[label][t] for t in all_terms), 4)
+WD_sum = {label: sum(wd_product[label][t] for t in all_terms)
           for label in all_labels}
 
 # ── Hitung Panjang Vektor: pv[label] = sqrt(sum(wdt[label][t]^2)) ──
 pv_sq = {}   # pv_sq[label][term] = wdt[label][term]^2
 for label in all_labels:
-    pv_sq[label] = {term: round(wdt[label][term] ** 2, 4) for term in all_terms}
+    pv_sq[label] = {term: wdt[label][term] ** 2 for term in all_terms}
 
-PV = {label: round(math.sqrt(sum(pv_sq[label][t] for t in all_terms)), 4)
+PV = {label: math.sqrt(sum(pv_sq[label][t] for t in all_terms))
       for label in all_labels}
 
 # ── Cosine Similarity: cos(Q, Di) = WD_sum[Di] / (PV[Q] * PV[Di]) ──
 cos_sim = {}
 for label in doc_labels:
     denom = PV['Q'] * PV[label]
-    cos_sim[label] = round(WD_sum[label] / denom, 5) if denom != 0 else 0.0
+    cos_sim[label] = (WD_sum[label] / denom) if denom != 0 else 0.0
 
 # ───────────────────────────────────────────────────────────────────
 # LAYOUT KOLOM:
@@ -489,17 +489,21 @@ for term in all_terms:
     for i, label in enumerate(all_labels):
         val_wd = wd_product[label][term]
         fill_wd = YELLOW if val_wd > 0 else WHITE
-        dc3(ws3, r3, C_WD_S + i, val_wd if val_wd != 0 else '', fill=fill_wd, fmt='0.0000')
+        cell_wd = dc3(ws3, r3, C_WD_S + i, val_wd, fill=fill_wd)
+        if val_wd != 0:
+            cell_wd.number_format = '0.000000'
 
         val_pv = pv_sq[label][term]
         fill_pv = GREEN if val_pv > 0 else WHITE
-        dc3(ws3, r3, C_PV_S + i, val_pv if val_pv != 0 else '', fill=fill_pv, fmt='0.0000')
+        cell_pv = dc3(ws3, r3, C_PV_S + i, val_pv, fill=fill_pv)
+        if val_pv != 0:
+            cell_pv.number_format = '0.000000'
     r3 += 1
 
 # ── Baris Jumlah WD (kuning) ──────────────
 dc3(ws3, r3, C_TERM, 'Jumlah', fill=GOLD_ROW, font=F_BOLD)
 for i, label in enumerate(all_labels):
-    dc3(ws3, r3, C_WD_S + i, WD_sum[label], fill=GOLD_ROW, font=F_BOLD, fmt='0.00000')
+    dc3(ws3, r3, C_WD_S + i, WD_sum[label], fill=GOLD_ROW, font=F_BOLD, fmt='0.000000')
 ws3.row_dimensions[r3].height = 16
 r3 += 1
 
@@ -508,7 +512,7 @@ dc3(ws3, r3, C_TERM, 'Panjang Vektor', fill=BLUE_ROW,
     font=Font(bold=True, color='FFFFFF', name='Calibri', size=11))
 for i, label in enumerate(all_labels):
     dc3(ws3, r3, C_PV_S + i, PV[label], fill=BLUE_ROW,
-        font=Font(bold=True, color='FFFFFF', name='Calibri', size=11), fmt='0.00000')
+        font=Font(bold=True, color='FFFFFF', name='Calibri', size=11), fmt='0.000000')
 ws3.row_dimensions[r3].height = 16
 r3 += 3
 
@@ -529,8 +533,9 @@ rank_row_start = r3
 for label in doc_labels:
     ws3.cell(row=r3, column=cos_col_start,
              value=f'Cos (Q,{label}) =').font = F_BOLD
-    ws3.cell(row=r3, column=cos_col_start + 2,
-             value=cos_sim[label]).font = F_NORM
+    cell_cos = ws3.cell(row=r3, column=cos_col_start + 2, value=cos_sim[label])
+    cell_cos.font          = F_NORM
+    cell_cos.number_format = '0.000000'
     r3 += 1
 
 # Tabel ranking di sebelah kanan mulai dari rank_row_start
@@ -554,7 +559,7 @@ r_rank += 1
 r_rank_left = r_rank
 for label in doc_labels:
     dc3(ws3, r_rank_left, rank_col_start,     label,          fill=TEAL_SUB)
-    dc3(ws3, r_rank_left, rank_col_start + 1, cos_sim[label], fmt='0.00000')
+    dc3(ws3, r_rank_left, rank_col_start + 1, cos_sim[label], fmt='0.000000')
     r_rank_left += 1
 
 # Isi tabel kanan (diurutkan descending)
@@ -562,7 +567,7 @@ sorted_docs = sorted(cos_sim.items(), key=lambda x: x[1], reverse=True)
 r_rank_right = r_rank
 for label, val in sorted_docs:
     dc3(ws3, r_rank_right, rank_col_start + 3, label, fill=BLUE_SUB2)
-    dc3(ws3, r_rank_right, rank_col_start + 4, val,   fmt='0.00000')
+    dc3(ws3, r_rank_right, rank_col_start + 4, val,   fmt='0.000000')
     r_rank_right += 1
 
 # ── Kesimpulan ────────────────────────────
@@ -572,9 +577,9 @@ ws3.cell(row=kc_row, column=1, value='Kesimpulan').font = Font(bold=True, size=1
 kc_row += 1
 conc_text = (
     f'Berdasarkan perhitungan Cosine Similarity, dokumen yang paling relevan dengan query adalah '
-    f'{best_doc} dengan nilai cos = {best_val:.5f}. '
+    f'{best_doc} dengan nilai cos = {best_val:.6f}. '
     f'Urutan relevansi dokumen dari tertinggi ke terendah: '
-    + ', '.join(f'{lbl} ({val:.5f})' for lbl, val in sorted_docs) + '.'
+    + ', '.join(f'{lbl} ({val:.6f})' for lbl, val in sorted_docs) + '.'
 )
 c = ws3.cell(row=kc_row, column=1, value=conc_text)
 c.font = F_NORM
@@ -597,4 +602,4 @@ wb.save(OUTPUT_FILE)
 print(f"\n[OK]  Output berhasil disimpan : {OUTPUT_FILE}")
 print(f"[DOC] Jumlah dokumen (D)       : {N}")
 print(f"[TRM] Jumlah term unik         : {len(all_terms)}")
-print(f"[SHT] Sheet                    : TF-IDF | Dokumen | Cosine Similarity")
+print(f"[SHT] Sheet                    : TF-IDF | Dokumen | COSSIM")
