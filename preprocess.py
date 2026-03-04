@@ -44,7 +44,32 @@ isi_text = ' '.join(line for line in isi_lines if line.strip())
 #    Hasilkan tabel: setiap token unik dengan frekuensi & keterangan
 # ─────────────────────────────────────────────
 
-# 5a. Case folding & bersihkan angka/tanda baca
+# 5a. Ekstrak angka dari teks ASLI beserta konteks (karakter sebelumnya)
+def label_angka(num_str, before=''):
+    """Beri label kontekstual pada angka."""
+    # Uang: didahului Rp atau US (dari US$)
+    if re.search(r'(?:Rp|US)$', before.strip()):
+        return f'{num_str}(uang)'
+    # Waktu: pola HH.MM atau HH:MM (jam 0-23, menit 0-59)
+    m = re.match(r'^(\d{1,2})[.:](\d{2})$', num_str)
+    if m and int(m.group(1)) <= 23 and int(m.group(2)) <= 59:
+        return f'{num_str}(waktu)'
+    # Tahun: 4 digit range 1900-2099
+    if re.match(r'^\d{4}$', num_str) and 1900 <= int(num_str) <= 2099:
+        return f'{num_str}(tahun)'
+    return num_str
+
+# Cari semua angka + 4 karakter sebelumnya untuk konteks
+raw_number_matches = list(re.finditer(r'\d+(?:[.,]\d+)*', isi_text))
+number_labels = []
+for m in raw_number_matches:
+    before = isi_text[max(0, m.start()-4):m.start()]  # konteks sebelum angka
+    number_labels.append(label_angka(m.group(), before))
+raw_numbers    = [m.group() for m in raw_number_matches]
+num_frekuensi  = len(raw_numbers)
+num_keterangan = ', '.join(number_labels) if number_labels else ''
+
+# 5b. Case folding & bersihkan angka/tanda baca untuk kata
 clean_text = isi_text.lower()
 clean_text = re.sub(r'[^a-z\s]', ' ', clean_text)
 all_tokens_raw = clean_text.split()
@@ -96,8 +121,7 @@ for word, freq in sorted(raw_freq.items(), key=lambda x: -x[1]):
         'keterangan' : keterangan
     })
 
-# 5d. Nomor baris (No.) pakai No dari data asli / urut
-# Beri nomor sesuai urutan kemunculan pertama di teks (untuk kolom No.)
+# 5e. Nomor baris (No.) sesuai urutan kemunculan pertama di teks
 order_map = {}
 idx = 1
 for t in all_tokens_raw:
@@ -106,6 +130,23 @@ for t in all_tokens_raw:
         idx += 1
 
 rows_sorted = sorted(rows, key=lambda r: -r['freq'])   # sort by freq desc
+
+# Sisipkan baris ANGKA di posisi yang tepat berdasarkan frekuensi
+if num_frekuensi > 0:
+    # Cari posisi insert agar urutan frekuensi tetap terjaga
+    insert_pos = len(rows_sorted)  # default: paling bawah
+    for i, r in enumerate(rows_sorted):
+        if r['freq'] <= num_frekuensi:
+            insert_pos = i
+            break
+    rows_sorted.insert(insert_pos, {
+        'word_raw'   : 'angka',
+        'stem'       : 'Angka',
+        'freq'       : num_frekuensi,
+        'is_stop'    : False,
+        'keterangan' : num_keterangan
+    })
+    order_map['angka'] = idx  # taruh di akhir nomor urut
 
 # ─────────────────────────────────────────────
 # 6. KATA KUNCI = token NON-stopword dengan frekuensi tertinggi
